@@ -5,7 +5,7 @@ Handles API endpoints for image processing and math problem solving
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import os
 import shutil
 import logging
@@ -13,9 +13,10 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
 import json
+import base64
 
 # Import AI engine
-from ai_engine import get_solver
+from ai_engine.llm_chain import solve_math_stream, solve_math
 
 # Configure logging
 logging.basicConfig(
@@ -45,12 +46,7 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 # Initialize AI solver
-try:
-    solver = get_solver()
-    logger.info("Math Solver Engine initialized successfully")
-except ValueError as e:
-    logger.warning(f"Math Solver Engine initialization: {e}")
-    solver = None
+logger.info("Math Solver Engine ready (dynamic initialization)")
 
 
 @app.get("/")
@@ -76,21 +72,11 @@ async def health():
 @app.post("/solve")
 async def solve(
     image: UploadFile = File(...),
-    variables: Optional[str] = Form(default="{}"),
-    step_by_step: Optional[bool] = Form(default=True)
-) -> Dict[str, Any]:
+    variables: Optional[str] = Form(default="")
+):
     """
-    Solve a math problem from an uploaded image
-    
-    Args:
-        image: Image file containing the math problem
-        variables: JSON string of variables to consider
-        step_by_step: Whether to provide step-by-step solution
-        
-    Returns:
-        Solution details including steps, explanation, and confidence
+    Solve a math problem from an uploaded image (streaming response)
     """
-    file_path = None
     try:
         # Validate image file
         if not image.filename:
@@ -101,75 +87,34 @@ async def solve(
         safe_filename = f"{timestamp}{image.filename}"
         file_path = UPLOAD_DIR / safe_filename
         
-        # Validate file size (max 10MB)
-        contents = await image.read()
-        if len(contents) > 10 * 1024 * 1024:
-            raise HTTPException(status_code=413, detail="File too large (max 10MB)")
-        
         # Save uploaded file
+        contents = await image.read()
         with open(file_path, "wb") as f:
             f.write(contents)
         
         logger.info(f"Image uploaded: {safe_filename}")
         
-        # Validate solver is initialized
-        if solver is None:
-            raise HTTPException(
-                status_code=503, 
-                detail="AI Solver not initialized. Check OpenAI API key."
-            )
+        # Convert image to base64 for llm_chain
+        encoded_img = base64.b64encode(contents).decode('utf-8')
         
-        # Process image with AI engine
-        logger.info(f"Processing image: {safe_filename} with variables: {variables}")
-        result = solver.solve_math_problem(
-            str(file_path),
-            variables=variables,
-            solve_step_by_step=step_by_step
-        )
+        def generator():
+            for chunk in solve_math_stream(encoded_img, variables or ""):
+                yield chunk
+                
+        return StreamingResponse(generator(), media_type="text/plain")
         
-        # Handle errors from solver
-        if "error" in result and result["error"]:
-            logger.error(f"Solver error: {result['error']}")
-            raise HTTPException(status_code=400, detail=result["error"])
-        
-        # Return successful response
-        response = {
-            "status": "success",
-            "filename": safe_filename,
-            **result,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-        logger.info(f"Successfully processed: {safe_filename}")
-        return response
-        
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error processing image: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-    finally:
-        # Cleanup: optionally delete the uploaded file after processing
-        # Uncomment if you want to save storage space
-        # if file_path and file_path.exists():
-        #     file_path.unlink()
-        pass
+        return StreamingResponse(iter([f"Backend Error: {str(e)}"]), media_type="text/plain")
 
 
 @app.post("/batch-solve")
 async def batch_solve(
     images: list[UploadFile] = File(...),
-    variables: Optional[str] = Form(default="{}")
+    variables: Optional[str] = Form(default="")
 ) -> Dict[str, Any]:
     """
     Solve multiple math problems in batch
-    
-    Args:
-        images: List of image files
-        variables: JSON string of variables
-        
-    Returns:
-        List of solutions for each image
     """
     if not images:
         raise HTTPException(status_code=400, detail="No images provided")
@@ -180,13 +125,31 @@ async def batch_solve(
     results = []
     for image in images:
         try:
-            result = await solve(image, variables)
-            results.append(result)
-        except HTTPException as e:
+            if not image.filename:
+                continue
+            contents = await image.read()
+            # Generate unique filename
+            timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_")
+            safe_filename = f"{timestamp}{image.filename}"
+            file_path = UPLOAD_DIR / safe_filename
+            with open(file_path, "wb") as f:
+                f.write(contents)
+            
+            # Solve math synchronously
+            encoded_img = base64.b64encode(contents).decode('utf-8')
+            solution = solve_math(encoded_img, variables or "")
+            
+            results.append({
+                "status": "success",
+                "filename": safe_filename,
+                "solution": solution,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        except Exception as e:
             results.append({
                 "filename": image.filename,
                 "status": "error",
-                "detail": e.detail
+                "detail": str(e)
             })
     
     return {
@@ -203,7 +166,7 @@ async def status() -> Dict[str, Any]:
     """Get API and system status"""
     return {
         "api_status": "running",
-        "solver_initialized": solver is not None,
+        "solver_initialized": True,
         "uploads_directory": str(UPLOAD_DIR),
         "max_file_size_mb": 10,
         "timestamp": datetime.utcnow().isoformat()

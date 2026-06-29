@@ -24,3 +24,9 @@ python-json-logger==2.0.7
 pytest==7.4.3
 black==23.12.0
 flake8==6.1.0
+
+# AI Engine dependencies (needed for llm_chain.py & rag_setup.py)
+langchain-groq
+langchain-huggingface
+langchain-community
+faiss-cpu
