@@ -43,12 +43,13 @@ SOLVE_ENDPOINT = f"{BACKEND_URL}/solve"
 TIMEOUT_SECONDS = 60
 
 
-def solve_equation(image_path: str, variables_text: str) -> str:
+def solve_equation(image_path: str, variables_text: str):
     """Send the uploaded image + variables to the FastAPI backend and
-    return a markdown string with the result (or a friendly error)."""
+    yield a markdown string with the result (or a friendly error) as it streams."""
 
     if image_path is None:
-        return "⚠️ Please upload an image of the math problem first."
+        yield "⚠️ Please upload an image of the math problem first."
+        return
 
     try:
         with open(image_path, "rb") as img_file:
@@ -60,35 +61,30 @@ def solve_equation(image_path: str, variables_text: str) -> str:
                 SOLVE_ENDPOINT,
                 files=files,
                 data=data,
+                stream=True,
                 timeout=TIMEOUT_SECONDS,
             )
         response.raise_for_status()
-        result = response.json()
-
-        if result.get("error"):
-            return f"❌ **Error from backend:** {result['error']}"
-
-        answer = result.get("answer", "No answer was returned.")
-        steps = result.get("steps")
-
-        if steps:
-            return f"### ✅ Answer\n{answer}\n\n### 🧮 Steps\n{steps}"
-        return f"### ✅ Answer\n{answer}"
+        
+        full_text = ""
+        # Read from stream chunk by chunk
+        for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
+            if chunk:
+                full_text += chunk
+                yield f"### ✅ Answer\n{full_text}"
 
     except requests.exceptions.ConnectionError:
-        return (
+        yield (
             f"❌ Couldn't connect to the backend at `{BACKEND_URL}`.\n\n"
             "Is the FastAPI server running? If you're testing locally, "
             "start it with `uvicorn main:app --reload` from the backend folder."
         )
     except requests.exceptions.Timeout:
-        return "❌ The request timed out. The backend took too long to respond."
+        yield "❌ The request timed out. The backend took too long to respond."
     except requests.exceptions.HTTPError as e:
-        return f"❌ Backend returned an HTTP error: {e}"
-    except ValueError:
-        return "❌ Backend response wasn't valid JSON. Check the server logs."
+        yield f"❌ Backend returned an HTTP error: {e}"
     except Exception as e:  # noqa: BLE001 - surface unexpected errors to the user
-        return f"❌ Unexpected error: {e}"
+        yield f"❌ Unexpected error: {e}"
 
 
 with gr.Blocks(title="AI Math Equation Evaluator") as demo:
@@ -119,8 +115,17 @@ with gr.Blocks(title="AI Math Equation Evaluator") as demo:
             submit_btn = gr.Button("Solve", variant="primary")
             clear_btn = gr.ClearButton([image_input, variables_input])
 
-        with gr.Column():
-            output_box = gr.Markdown(label="📝 Solution", value="Your solution will appear here.")
+        with gr.Column(scale=1):
+            # Output side - THIS IS THE FIX! 
+            # gr.Markdown natively renders LaTeX math equations beautifully.
+            output_box = gr.Markdown(
+                label="📝 Solution", 
+                value="Your solution will appear here.",
+                latex_delimiters=[
+                    {"left": "$$", "right": "$$", "display": True},
+                    {"left": "$", "right": "$", "display": False}
+                ]
+            )
 
     submit_btn.click(
         fn=solve_equation,

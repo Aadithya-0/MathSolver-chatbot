@@ -16,22 +16,26 @@ def apply_input_guardrails(variables: str) -> str | None:
             return "Error: Security violation. Invalid prompt injection detected."
     return None
 
-def solve_math(base64_image:str,variables:str) -> str:
-    guardrail_error=apply_input_guardrails(variables)
+from typing import Generator
+
+def solve_math_stream(base64_image: str, variables: str) -> Generator[str, None, None]:
+    guardrail_error = apply_input_guardrails(variables)
     if guardrail_error:
-        return guardrail_error
-    api_key=os.environ.get('GROQ_API_KEY')
+        yield guardrail_error
+        return
+    api_key = os.environ.get('GROQ_API_KEY')
     if not api_key:
-        return "Error:GROQ_API_KEY env is not set"
-    chat=ChatGroq(model=GROQ_MODEL,api_key=api_key)
+        yield "Error: GROQ_API_KEY env is not set"
+        return
+    chat = ChatGroq(model=GROQ_MODEL, api_key=api_key, max_tokens=4096)
     try:
-        retriever=get_retriever()
-        docs=retriever.invoke(variables)
-        context="\n".join([doc.page_content for doc in docs])
+        retriever = get_retriever()
+        docs = retriever.invoke(variables)
+        context = "\n".join([doc.page_content for doc in docs])
     except Exception as e:
-        context="No relavant context found"
+        context = "No relevant context found"
         print(f"rag warning {e}")
-    system_inst=f"""
+    system_inst = f"""
         You are an expert Math AI Assistant specializing in Calculus, Linear Algebra, and Statistics.
  SECURITY & CONTENT SAFETY RULES:
     1. ONLY answer math-related queries. If the image or text is NOT about math, reply EXACTLY with: "I can only assist with mathematics problems. Please upload a valid math equation."
@@ -51,14 +55,66 @@ def solve_math(base64_image:str,variables:str) -> str:
     - BE EXTREMELY CONCISE. Do not provide long text explanations, theory, or formula derivations.
     - If the user provides variables, plug them into the equation found in the image and calculate the final numerical answer.
     - Output ONLY the mathematical steps and the final result.
-    - If NO variables are provided, simply reply: "Please provide the values for the variables to solve this equation."
+    - Present the final answer centered and framed in a LaTeX box, for example:
+      ### **Final Answer**
+      $$ \boxed{{x = 3, -1}} $$
+    - If NO variables are provided, solve the equation symbolically (e.g., solve for x in terms of other variables) or explain the general formula/concept shown in the image.
     """
-    user_msg=HumanMessage(content=[{"type":"text","text":f"{system_inst}"},{"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{base64_image}"}}])
+    user_msg = HumanMessage(content=[
+        {"type": "text", "text": f"{system_inst}"},
+        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+    ])
     try:
-        response=chat.invoke([user_msg])
-        return str(response.content)
+        in_think = False
+        buffer = ""
+        for chunk in chat.stream([user_msg]):
+            content = str(chunk.content)
+            if not content:
+                continue
+            
+            buffer += content
+            while True:
+                if not in_think:
+                    if "<think>" in buffer:
+                        before_think, after_think = buffer.split("<think>", 1)
+                        if before_think:
+                            yield before_think
+                        buffer = after_think
+                        in_think = True
+                    else:
+                        partial_match = False
+                        for i in range(1, len("<think>")):
+                            if buffer.endswith("<think>"[:i]):
+                                yield buffer[:-i]
+                                buffer = buffer[-i:]
+                                partial_match = True
+                                break
+                        if not partial_match:
+                            yield buffer
+                            buffer = ""
+                        break
+                else:
+                    if "</think>" in buffer:
+                        _, after_think = buffer.split("</think>", 1)
+                        buffer = after_think
+                        in_think = False
+                    else:
+                        partial_match = False
+                        for i in range(1, len("</think>")):
+                            if buffer.endswith("</think>"[:i]):
+                                buffer = buffer[-i:]
+                                partial_match = True
+                                break
+                        if not partial_match:
+                            buffer = ""
+                        break
+        if buffer and not in_think:
+            yield buffer
     except Exception as e:
-        return f"Error during LLM processing: {str(e)}"
+        yield f"Error during LLM processing: {str(e)}"
+
+def solve_math(base64_image: str, variables: str) -> str:
+    return "".join(solve_math_stream(base64_image, variables))
 
 if __name__ == "__main__":
     # Quick local test execution
