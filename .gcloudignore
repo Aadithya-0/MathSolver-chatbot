@@ -1,0 +1,19 @@
+# Google Cloud Build ignore file
+# Same as .dockerignore plus some GCP-specific items
+
+__pycache__/
+*.pyc
+.git/
+.gitignore
+venv/
+.env
+.env.local
+.vscode/
+.idea/
+*.swp
+.DS_Store
+.pytest_cache/
+.coverage
+.tox/
+docs/
+test/
