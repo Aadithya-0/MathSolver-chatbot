@@ -1,0 +1,55 @@
+Calculus Knowledge Base
+
+Derivatives
+
+Power Rule: d/dx (x^n) = n * x^(n-1). Used for basic polynomials.
+
+Product Rule: d/dx (u * v) = u'v + uv'. Used when multiplying two functions.
+
+Quotient Rule: d/dx (u / v) = (u'v - uv') / v^2. Used when dividing two functions.
+
+Chain Rule: d/dx [f(g(x))] = f'(g(x)) * g'(x). Used for nested functions or composite functions.
+
+Integrals
+
+Basic Integration: Integral(x^n dx) = (x^(n+1))/(n+1) + C, for n != -1.
+
+Integration by Parts: Integral(u dv) = uv - Integral(v du). Often used for products of algebraic and transcendental functions.
+
+U-Substitution: Integral(f(g(x))g'(x) dx) = Integral(f(u) du) where u = g(x). Used to reverse the chain rule.
+
+Linear Algebra Knowledge Base
+
+Matrix Operations
+
+Matrix Addition: (A + B)_ij = A_ij + B_ij. Matrices must be the same dimensions.
+
+Matrix Multiplication: (AB)_ij = Sum_k (A_ik * B_kj). The number of columns in A must equal the number of rows in B.
+
+Transpose: (A^T)_ij = A_ji. Flips a matrix over its diagonal.
+
+Determinants and Eigenvalues
+
+Determinant of 2x2 matrix: For A = [a b; c d], det(A) = ad - bc. If det(A) is 0, the matrix is not invertible.
+
+Eigenvalue equation: Av = lambdav. Here, A is a square matrix, v is the eigenvector, and lambda is the eigenvalue scalar.
+
+Cramer's Rule: Used to solve a system of linear equations using determinants. x_i = det(A_i) / det(A).
+
+Statistics & Probability Knowledge Base
+
+Descriptive Statistics
+
+Mean (Expected Value): Sum of all values / total number of values. It is the average of a dataset.
+
+Median: The middle number in a sorted, ascending or descending, list of numbers.
+
+Variance (sigma^2): Average of squared differences from the Mean. Measures how far a set of numbers is spread out from their average value.
+
+Standard Deviation (sigma): Square root of the Variance. Expressed in the same units as the data.
+
+Probability
+
+Bayes' Theorem: P(A|B) = P(B|A) * P(A) / P(B). Used to determine conditional probability.
+
+Z-Score: Z = (X - Mean) / Standard Deviation. Describes a value's relationship to the mean of a group of values, measured in terms of standard deviations from the mean.
