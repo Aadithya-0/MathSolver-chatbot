@@ -47,6 +47,11 @@ def solve_math(base64_image:str,variables:str) -> str:
     User provided variables/instructions: {variables}
     
     Provide a clear, step-by-step solution.
+    BEHAVIORAL RULES:
+    - BE EXTREMELY CONCISE. Do not provide long text explanations, theory, or formula derivations.
+    - If the user provides variables, plug them into the equation found in the image and calculate the final numerical answer.
+    - Output ONLY the mathematical steps and the final result.
+    - If NO variables are provided, simply reply: "Please provide the values for the variables to solve this equation."
     """
     user_msg=HumanMessage(content=[{"type":"text","text":f"{system_inst}"},{"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{base64_image}"}}])
     try:
