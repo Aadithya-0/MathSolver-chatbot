@@ -38,7 +38,8 @@ try:
 except ImportError:
     pass  # dotenv is optional; env vars can also be set directly
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
+# Use an empty string so it points to the current host
+BACKEND_URL = os.getenv("BACKEND_URL", "").rstrip("/")
 SOLVE_ENDPOINT = f"{BACKEND_URL}/solve"
 TIMEOUT_SECONDS = 60
 

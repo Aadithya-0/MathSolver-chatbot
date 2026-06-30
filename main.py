@@ -14,6 +14,8 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 import json
 import base64
+import gradio as gr
+from frontend.app import demo
 
 # Import AI engine
 from ai_engine.llm_chain import solve_math_stream, solve_math
@@ -40,6 +42,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.gr.mount_gradio_app(app, demo, path="/gradio")
 
 # Create uploads folder if it doesn't exist
 UPLOAD_DIR = Path("uploads")
@@ -189,9 +192,14 @@ async def http_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    # Force the default to 8080 to match Cloud Run requirements
+    port = int(os.getenv("PORT", 8080))
+    
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=int(os.getenv("PORT", 8000)),
+        port=port,
         reload=os.getenv("ENVIRONMENT", "development") == "development"
     )

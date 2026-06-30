@@ -35,10 +35,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)"
 
 # Expose port (Cloud Run expects the service to listen on $PORT, default 8080)
-EXPOSE 8000
+EXPOSE 8080
 
 # Set the port environment variable
-ENV PORT=8000
+ENV PORT=8080
 
 # Run the application
-CMD exec uvicorn main:app --host 0.0.0.0 --port ${PORT} --workers 4
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT} --workers 4"]

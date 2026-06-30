@@ -4,11 +4,9 @@ python-multipart==0.0.6
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# LangChain and LLM dependencies
-langchain==0.1.1
-langchain-openai==0.0.5
-openai==1.3.5
-
+langchain
+langchain-groq
+langchain-community
 # Image processing
 pillow>=10.0.0
 opencv-python>=4.8.0
@@ -26,7 +24,5 @@ black==23.12.0
 flake8==6.1.0
 
 # AI Engine dependencies (needed for llm_chain.py & rag_setup.py)
-langchain-groq
 langchain-huggingface
-langchain-community
 faiss-cpu
