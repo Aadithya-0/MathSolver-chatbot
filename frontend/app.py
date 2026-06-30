@@ -38,8 +38,12 @@ try:
 except ImportError:
     pass  # dotenv is optional; env vars can also be set directly
 
-# Use an empty string so it points to the current host
-BACKEND_URL = os.getenv("BACKEND_URL", "").rstrip("/")
+# Use localhost with configured PORT as default fallback if BACKEND_URL is empty or unset
+BACKEND_URL = os.getenv("BACKEND_URL")
+if not BACKEND_URL:
+    PORT = os.getenv("PORT", "8080")
+    BACKEND_URL = f"http://127.0.0.1:{PORT}"
+BACKEND_URL = BACKEND_URL.rstrip("/")
 SOLVE_ENDPOINT = f"{BACKEND_URL}/solve"
 TIMEOUT_SECONDS = 60
 
