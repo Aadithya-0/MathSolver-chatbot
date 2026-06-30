@@ -17,3 +17,5 @@ venv/
 .tox/
 docs/
 test/
+uploads/
+env.yaml

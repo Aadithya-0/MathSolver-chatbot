@@ -90,79 +90,67 @@ This service provides REST API endpoints for:
    - API Documentation: http://localhost:8000/docs
    - Alternative Docs: http://localhost:8000/redoc
 
-## Docker Deployment
+## Google Cloud Deployment
 
-### Build Docker Image
+This application can be deployed directly to Google Cloud Platform (GCP) without using Docker. There are two primary recommended ways to host:
 
-```bash
-docker build -t math-solver-api:latest .
-```
+### Option 1: Google App Engine (Standard Environment)
 
-### Run Docker Container
+Google App Engine Standard runs Python applications natively and manages the scaling and environment automatically.
 
-```bash
-docker run -p 8000:8000 \
-  -e OPENAI_API_KEY="your-key-here" \
-  -v $(pwd)/uploads:/app/uploads \
-  math-solver-api:latest
-```
+#### Prerequisites
+- A Google Cloud Project with billing enabled
+- The `gcloud` CLI installed and configured on your machine
 
-## Google Cloud Run Deployment
+#### Steps to Deploy
+1. **Configure Environment Variables**:
+   Define any environment variables required by your application (e.g. `GROQ_API_KEY`, `OPENAI_API_KEY`) inside `app.yaml`:
+   ```yaml
+   runtime: python311
+   entrypoint: uvicorn main:app --host 0.0.0.0 --port $PORT
 
-### Prerequisites
-
-- Google Cloud Project with billing enabled
-- `gcloud` CLI installed and configured
-- Docker installed
-
-### Deploy Using Cloud Build
-
-1. **Set up GCP project**
-   ```bash
-   export PROJECT_ID="your-project-id"
-   export REGION="us-central1"
-   gcloud config set project $PROJECT_ID
+   env_variables:
+     GROQ_API_KEY: "your-groq-api-key"
+     OPENAI_API_KEY: "your-openai-api-key"
+     ENVIRONMENT: "production"
    ```
 
-2. **Enable required APIs**
+2. **Run Deploy Command**:
+   Run the following command from the root directory:
    ```bash
-   gcloud services enable cloudbuild.googleapis.com run.googleapis.com containerregistry.googleapis.com
+   gcloud app deploy
    ```
 
-3. **Create Cloud Build configuration** (cloudbuild.yaml is provided)
+### Option 2: Google Cloud Run (Source-Based Deployment)
 
-4. **Deploy with Cloud Build**
+Google Cloud Run allows you to deploy directly from source code without having Docker installed locally. Google Cloud Buildpacks will automatically detect the Python runtime, build a container image, and run it using the `Procfile` entrypoint.
+
+#### Steps to Deploy
+1. **Deploy from Source**:
+   Run the `gcloud run deploy` command with the `--source` option:
    ```bash
-   gcloud builds submit \
-     --config cloudbuild.yaml \
-     --substitutions=_SERVICE_NAME=math-solver-api,_REGION=$REGION,_OPENAI_API_KEY="your-key"
+   gcloud run deploy math-solver-api \
+     --source . \
+     --platform managed \
+     --region us-central1 \
+     --allow-unauthenticated \
+     --set-env-vars GROQ_API_KEY="your-groq-api-key",ENVIRONMENT="production" \
+     --memory 2Gi \
+     --cpu 2 \
+     --timeout 3600
    ```
 
-### Direct Cloud Run Deployment
-
-```bash
-gcloud run deploy math-solver-api \
-  --source . \
-  --platform managed \
-  --region $REGION \
-  --allow-unauthenticated \
-  --set-env-vars OPENAI_API_KEY="your-key-here" \
-  --memory 2Gi \
-  --cpu 2 \
-  --timeout 3600
-```
 
 ## File Structure
 
 ```
 MathSolver-chatbot/
 ├── main.py                  # FastAPI application
-├── Dockerfile              # Container configuration
-├── cloudbuild.yaml         # GCP Cloud Build config
+├── app.yaml                 # GCP App Engine Standard configuration
+├── Procfile                 # GCP Cloud Run Buildpacks configuration
 ├── requirements.txt        # Python dependencies
 ├── .env.example           # Environment template
-├── .dockerignore          # Docker build ignore
-├── .gcloudignore          # GCP build ignore
+├── .gcloudignore          # GCP deployment ignore list
 ├── ai_engine/
 │   ├── __init__.py
 │   └── math_solver.py     # AI solver engine with LangChain
@@ -230,11 +218,6 @@ curl -X POST "http://localhost:8000/solve" \
 - Reinstall dependencies: `pip install -r requirements.txt`
 - Ensure you're in the correct virtual environment
 
-### Docker build fails
-- Check Docker is running
-- Ensure all files are in the correct location
-- Check internet connectivity for pip package downloads
-
 ## Contributing
 
 1. Create a feature branch
@@ -252,7 +235,7 @@ curl -X POST "http://localhost:8000/solve" \
 ## Next Steps
 
 1. ✅ Set up FastAPI backend with all endpoints
-2. ✅ Create Docker configuration for Cloud Run
+2. ✅ Configure non-docker direct deployment configurations for GCP
 3. 🔄 Integrate Abishek's LangChain solver functions
 4. 🔄 Connect Gradio frontend to API
 5. 🔄 Test end-to-end flow

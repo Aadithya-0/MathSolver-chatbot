@@ -44,9 +44,12 @@ app.add_middleware(
 )
 app = gr.mount_gradio_app(app, demo, path="/gradio")
 
-# Create uploads folder if it doesn't exist
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+# Create uploads folder if it doesn't exist. GAE Standard filesystem is read-only except for /tmp.
+if os.getenv("GAE_ENV", "").startswith("standard") or os.getenv("ENVIRONMENT") == "production":
+    UPLOAD_DIR = Path("/tmp/uploads")
+else:
+    UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Initialize AI solver
 logger.info("Math Solver Engine ready (dynamic initialization)")
