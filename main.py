@@ -42,7 +42,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.gr.mount_gradio_app(app, demo, path="/gradio")
+app = gr.mount_gradio_app(app, demo, path="/gradio")
 
 # Create uploads folder if it doesn't exist
 UPLOAD_DIR = Path("uploads")

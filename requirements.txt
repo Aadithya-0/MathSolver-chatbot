@@ -3,13 +3,15 @@ uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 pydantic==2.5.0
 pydantic-settings==2.1.0
+python-dotenv==1.0.0
 
 langchain
 langchain-groq
+langchain-openai
 langchain-community
 # Image processing
 pillow>=10.0.0
-opencv-python>=4.8.0
+opencv-python-headless>=4.8.0
 
 # API clients
 requests==2.31.0
@@ -26,3 +28,5 @@ flake8==6.1.0
 # AI Engine dependencies (needed for llm_chain.py & rag_setup.py)
 langchain-huggingface
 faiss-cpu
+
+gradio==5.36.2

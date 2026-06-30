@@ -13,32 +13,32 @@ ENV PYTHONUNBUFFERED=1 \
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libopencv-dev \
-    python3-opencv \
+    libglib2.0-0 \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --upgrade pip setuptools wheel
 
 # Copy requirements first for better layer caching
 COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt
+RUN pip install -r requirements.txt
 
 # Copy application code
 COPY . .
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Create uploads directory with proper permissions
+RUN mkdir -p uploads && chmod 755 uploads
 
 # Health check
+# Cloud Run expects the app to listen on the PORT env var (usually 8080)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)"
+    CMD python3 -c "import requests, os; requests.get('http://localhost:' + os.getenv('PORT', '8080') + '/health').raise_for_status()"
 
-# Expose port (Cloud Run expects the service to listen on $PORT, default 8080)
+# Port configuration
+# Cloud Run overrides this, but 8080 is the standard default
+ENV PORT=8080
 EXPOSE 8080
 
-# Set the port environment variable
-ENV PORT=8080
-
 # Run the application
-CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT} --workers 4"]
+CMD ["sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
