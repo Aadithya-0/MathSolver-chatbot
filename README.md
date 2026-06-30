@@ -54,6 +54,33 @@ This service provides REST API endpoints for:
     -F "variables={}"
   ```
 
+## Gradio Frontend & Integration
+
+The Gradio frontend component (`frontend/app.py`) provides the web interface for the application:
+1. **Upload Equation Image**: Lets a user upload an image of a math problem (handwritten or typed).
+2. **Provide Variables**: Lets the user optionally type in variable values (e.g. `x = 5, y = 3`).
+3. **Solve**: Sends both parameters to the FastAPI backend, which runs OCR + the LangChain/FAISS retrieval chain and returns a solved answer.
+4. **Step-by-Step Explanation**: Displays the answer and formatted step-by-step working if provided.
+
+### Frontend-Backend Contract
+The frontend communicates with the FastAPI backend using the following protocol:
+- **Endpoint**: `POST {BACKEND_URL}/solve`
+- **Content-Type**: `multipart/form-data`
+- **Fields**:
+  - `image`: file (the uploaded image)
+  - `variables`: string (free-text variable values, e.g. "x = 5", may be empty)
+- **Response Format (JSON Stream)**:
+  ```json
+  {
+    "answer": "string",
+    "steps": "string (optional)",
+    "error": "string (optional)"
+  }
+  ```
+
+### Configuration
+Set the `BACKEND_URL` in a `.env` file or environment variable. If not set, it defaults to `http://127.0.0.1:{PORT}` (using local loopback) for integrated deployment.
+
 ## Setup & Installation
 
 ### Local Development
@@ -168,13 +195,11 @@ MathSolver-chatbot/
 - `LANGCHAIN_API_KEY` - Optional LangChain tracing API key
 - `LOG_LEVEL` - Logging level (default: INFO)
 
-## Integration with Abishek's LangChain Functions
+## LangChain AI Solver Engine
 
-The AI engine is designed to integrate with LangChain solving functions. 
-
-**Current Status**: Placeholder implementation in `ai_engine/math_solver.py`
-
-**TODO**: Replace the `_call_langchain_solver()` method with Abishek's actual LangChain implementation.
+The AI core in `ai_engine/` handles math problem evaluation using LangChain and a custom RAG (Retrieval-Augmented Generation) setup:
+- `ai_engine/llm_chain.py`: Coordinates the prompt generation, guardrails, and streaming response from the Groq vision model.
+- `ai_engine/rag_setup.py`: Implements the retrieval mechanism using FAISS vector store and HuggingFace embeddings.
 
 ## Testing
 
@@ -229,14 +254,14 @@ curl -X POST "http://localhost:8000/solve" \
 ## Team Responsibilities
 
 - **Frontend Developer (Gradio)**: Create the UI interface
-- **API Backend Developer**: Main.py, FastAPI setup, deployment ✅ (This role)
-- **AI Engineer (Abishek)**: LangChain solver functions
+- **API Backend Developer**: Main.py, FastAPI setup, deployment
+- **AI Engineer**: LangChain solver functions
 
 ## Next Steps
 
 1. ✅ Set up FastAPI backend with all endpoints
 2. ✅ Configure non-docker direct deployment configurations for GCP
-3. 🔄 Integrate Abishek's LangChain solver functions
+3. 🔄 Integrate LangChain solver functions
 4. 🔄 Connect Gradio frontend to API
 5. 🔄 Test end-to-end flow
 6. 🔄 Deploy to Google Cloud Run
@@ -249,5 +274,5 @@ curl -X POST "http://localhost:8000/solve" \
 ## Contact
 
 For questions about the backend API, contact: [Backend Developer Email]
-For LangChain integration questions, contact: Abishek
+For LangChain integration questions, contact: [AI Engineer Email]
 For Gradio frontend questions, contact: [Frontend Developer Email]

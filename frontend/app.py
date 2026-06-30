@@ -1,32 +1,4 @@
-"""
-AI Math Equation Evaluator — Gradio Frontend
-=============================================
-UI & Integration Specialist's component.
-
-What this does:
-1. Lets a user upload an image of a math problem (handwritten or typed).
-2. Lets the user optionally type in variable values (e.g. "x = 5, y = 3").
-3. Sends both to the FastAPI backend, which runs OCR + the LangChain/FAISS
-   retrieval chain and returns a solved answer.
-4. Displays the answer (and step-by-step work, if the backend provides it).
-
-Backend contract (coordinate with the API/Backend Developer):
-    POST {BACKEND_URL}/solve
-    Content-Type: multipart/form-data
-    fields:
-        - image: file              (the uploaded image)
-        - variables: str           (free-text variable values, may be empty)
-    Response JSON:
-        {
-          "answer": str,           # required
-          "steps": str,            # optional, markdown-formatted working
-          "error": str             # optional, set if something went wrong
-        }
-
-Configuration:
-    Set BACKEND_URL in a .env file or as an environment variable.
-    Defaults to http://localhost:8000 for local testing against FastAPI.
-"""
+"""Gradio frontend interface for the Math Solver Chatbot"""
 
 import os
 import requests
@@ -92,17 +64,26 @@ def solve_equation(image_path: str, variables_text: str):
         yield f"❌ Unexpected error: {e}"
 
 
-with gr.Blocks(title="AI Math Equation Evaluator") as demo:
+# Polished built-in theme using soft colors and Inter font
+theme = gr.themes.Soft(
+    primary_hue="indigo",
+    secondary_hue="slate",
+    neutral_hue="slate",
+    font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
+)
+
+
+with gr.Blocks(title="AI Math Equation Evaluator", theme=theme) as demo:
     gr.Markdown(
         """
-        # 🧮 AI Math Equation Evaluator
+        # 🧮 Mathematical Symbolic Solver
 
-        Upload a photo of a math problem and (optionally) provide variable
-        values. This bot currently supports:
+        A tool for parsing and solving complex mathematical equations from visual inputs. Upload an image of a handwritten or printed math problem, optionally define variables, and retrieve step-by-step symbolic and numeric solutions.
 
-        - **Calculus** — derivatives, integrals, limits
-        - **Statistics** — probability, distributions, hypothesis testing
-        - **Linear Algebra** — matrices, vectors, eigenvalues, systems of equations
+        ### Supported Fields:
+        - **Analysis & Calculus** — Limits, differentiation, integration, and differential equations
+        - **Algebra & Eigensystems** — Matrix computations, vector arithmetic, and linear equations
+        - **Probability & Analytics** — Statistical distributions, hypothesis testing, and regression models
         """
     )
 
@@ -117,12 +98,11 @@ with gr.Blocks(title="AI Math Equation Evaluator") as demo:
                 placeholder="e.g. x = 5, y = 3, a = 2",
                 lines=2,
             )
-            submit_btn = gr.Button("Solve", variant="primary")
-            clear_btn = gr.ClearButton([image_input, variables_input])
+            with gr.Row():
+                submit_btn = gr.Button("Solve", variant="primary")
+                clear_btn = gr.ClearButton([image_input, variables_input])
 
         with gr.Column(scale=1):
-            # Output side - THIS IS THE FIX! 
-            # gr.Markdown natively renders LaTeX math equations beautifully.
             output_box = gr.Markdown(
                 label="📝 Solution", 
                 value="Your solution will appear here.",
