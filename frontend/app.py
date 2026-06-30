@@ -66,10 +66,23 @@ def solve_equation(image_path: str, variables_text: str):
 
 # Polished built-in theme using soft colors and Inter font
 theme = gr.themes.Soft(
-    primary_hue="indigo",
+    primary_hue="violet",       # Pastel violet/purple accents
     secondary_hue="slate",
     neutral_hue="slate",
     font=[gr.themes.GoogleFont("Inter"), "ui-sans-serif", "system-ui", "sans-serif"],
+).set(
+    body_background_fill="#0B0F19",       # Deep, modern slate dark background
+    block_background_fill="#151E2E",      # Slightly lighter container backgrounds
+    block_border_color="rgba(255, 255, 255, 0.08)",
+    
+    # Muted pastel gradient for primary buttons (Solve)
+    button_primary_background_fill="linear-gradient(135deg, #c084fc 0%, #a78bfa 100%)",
+    button_primary_background_fill_hover="linear-gradient(135deg, #a855f7 0%, #8b5cf6 100%)",
+    button_primary_text_color="#ffffff",
+    
+    # Clean input styling
+    input_background_fill="#0B0F19",
+    input_border_color="rgba(255, 255, 255, 0.08)",
 )
 
 
